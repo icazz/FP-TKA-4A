@@ -1,0 +1,88 @@
+networks:
+  app-net:
+    driver: overlay
+    attachable: true
+  traefik-pub:
+    driver: overlay
+    attachable: true
+
+volumes:
+  traefik-certs:
+
+services:
+  proxy:
+    image: traefik:v3.7
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.swarm=true"
+      - "--providers.swarm.exposedByDefault=false"
+      - "--providers.swarm.network=traefik-pub"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-pub
+      - app-net
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+  
+  backend:
+    image: icaz/order-backend:latest
+    environment:
+      - MONGO_URI=mongodb://172.23.111.230:27017
+      - JWT_SECRET=166b099f89967531a9e85410d4e86daaabe7c7760df8f451f797a7287decc297
+      - PORT=5000
+    networks:
+      - traefik-pub
+      - app-net
+    deploy:
+      replicas: 4
+      placement:
+        preferences:
+          - spread: node.id
+        constraints:
+          - node.role == worker
+      update_config:
+        parallelism: 2
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+        - "traefik.http.routers.backend.entrypoints=web"
+        - "traefik.http.services.backend.loadbalancer.server.port=5000"
+        - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+        - "traefik.http.routers.backend.middlewares=strip-api"
+
+  frontend:
+    image: icaz/order-frontend:latest
+    environment:
+      - API_BASE=http://172.23.104.138/api
+    networks:
+      - traefik-pub
+      - app-net
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+        - "traefik.http.routers.frontend.entrypoints=web"
+        - "traefik.http.services.frontend.loadbalancer.server.port=80"
