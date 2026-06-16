@@ -35,6 +35,22 @@ from pymongo import MongoClient, DESCENDING, ASCENDING
 # ═══════════════════════════════════════════
 app = Flask(__name__)
 
+# Enable CORS for local testing (Web UI -> Backend)
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET,PUT,POST,DELETE,OPTIONS"
+        return response
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 MONGO_URI   = os.environ.get("MONGO_URI",   "mongodb://localhost:27017/")
 JWT_SECRET  = os.environ.get("JWT_SECRET",  "ganti-ini-di-production-dengan-string-acak-panjang")
 JWT_EXPIRES = int(os.environ.get("JWT_EXPIRES", 86400))
@@ -371,16 +387,32 @@ def create_order():
 
 
 @app.route("/orders", methods=["GET"])
-@login_required
 def list_orders():
-    # User hanya lihat ordernya sendiri; admin lihat semua
-    query = {} if g.role == "admin" else {"user_id": ObjectId(g.user_id)}
+    # User hanya lihat ordernya sendiri; admin lihat semua (optional auth)
+    auth = request.headers.get("Authorization", "")
+    is_authenticated = False
+    role = "user"
+    user_id = None
+    if auth.startswith("Bearer "):
+        token = auth.split(" ", 1)[1]
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            user_id = payload["sub"]
+            role    = payload["role"]
+            is_authenticated = True
+        except Exception:
+            pass
+
+    if is_authenticated:
+        query = {} if role == "admin" else {"user_id": ObjectId(user_id)}
+    else:
+        query = {}
 
     status = request.args.get("status")
     city   = request.args.get("city")
     if status:
         query["status"] = status
-    if city and g.role == "admin":
+    if city and is_authenticated and role == "admin":
         query["customer_city"] = city
 
     try:
@@ -392,8 +424,31 @@ def list_orders():
     total  = orders_col.count_documents(query)
     docs   = list(orders_col.find(query, {"_id": 1, "order_id": 1, "customer_name": 1,
                                           "total": 1, "status": 1, "payment_method": 1,
-                                          "created_at": 1, "items": 1})
+                                          "created_at": 1, "items": 1,
+                                          "product": 1, "quantity": 1, "price": 1})
                   .sort("created_at", DESCENDING).skip((page-1)*limit).limit(limit))
+
+    # Jika di-fetch tanpa parameter limit/page (format flat list untuk Web UI)
+    if "page" not in request.args and "limit" not in request.args:
+        flat_docs = []
+        for d in docs:
+            if "product" in d:
+                flat_docs.append(serialize(d))
+            else:
+                first_item = d["items"][0]["product_name"] if d.get("items") else "Produk"
+                qty = d["items"][0]["qty"] if d.get("items") else 1
+                prc = d["items"][0]["price"] if d.get("items") else d.get("total", 0)
+                flat_docs.append({
+                    "order_id": d["order_id"],
+                    "product": first_item,
+                    "quantity": qty,
+                    "price": prc,
+                    "total": d["total"],
+                    "status": d["status"],
+                    "created_at": d["created_at"]
+                })
+        return jsonify(flat_docs)
+
     return jsonify({"page": page, "limit": limit, "total": total,
                     "total_pages": -(-total // limit), "data": [serialize(d) for d in docs]})
 
@@ -430,6 +485,86 @@ def update_order_status(order_id):
     write_log("update_order_status", "orders", order_id,
               {"new_status": d["status"], "note": d.get("note","")})
     return jsonify({"order_id": order_id, "status": d["status"]})
+
+
+# ═══════════════════════════════════════════
+# SIMPLIFIED ORDER endpoints (for Frontend Compatibility)
+# ═══════════════════════════════════════════
+
+@app.route("/order", methods=["POST"])
+def create_simple_order():
+    d = request.get_json() or {}
+    product = d.get("product")
+    quantity = d.get("quantity")
+    price = d.get("price")
+    if not product or not quantity or not price:
+        return err("Field 'product', 'quantity', dan 'price' wajib diisi")
+
+    import uuid
+    order_id = str(uuid.uuid4())
+    qty = int(quantity)
+    prc = float(price)
+    total = qty * prc
+    now = now_iso()
+
+    doc = {
+        "order_id":        order_id,
+        "product":         product,
+        "quantity":        qty,
+        "price":           prc,
+        "total":           total,
+        "status":          "pending",
+        "created_at":      now,
+        "updated_at":      now,
+    }
+    orders_col.insert_one(doc)
+    return jsonify(serialize(doc)), 201
+
+
+@app.route("/order/<order_id>", methods=["GET"])
+def get_simple_order(order_id):
+    doc = orders_col.find_one({"order_id": order_id})
+    if not doc:
+        return err("Order tidak ditemukan", 404)
+
+    if "product" in doc:
+        return jsonify(serialize(doc))
+
+    # Jika formatnya complex order dari app.py (dengan items)
+    # Kita sesuaikan agar frontend tidak crash:
+    first_item = doc["items"][0]["product_name"] if doc.get("items") else "Produk"
+    qty = doc["items"][0]["qty"] if doc.get("items") else 1
+    prc = doc["items"][0]["price"] if doc.get("items") else doc.get("total", 0)
+    simple_doc = {
+        "order_id": doc["order_id"],
+        "product": first_item,
+        "quantity": qty,
+        "price": prc,
+        "total": doc["total"],
+        "status": doc["status"],
+        "created_at": doc["created_at"]
+    }
+    return jsonify(serialize(simple_doc))
+
+
+@app.route("/order/<order_id>", methods=["PUT"])
+def update_simple_order(order_id):
+    d = request.get_json() or {}
+    status = d.get("status")
+    valid = ["pending", "processing", "completed", "cancelled"]
+    if status not in valid:
+        return err(f"Status tidak valid. Pilihan: {valid}")
+
+    result = orders_col.update_one(
+        {"order_id": order_id},
+        {"$set": {"status": status,
+                  "updated_at": now_iso()}}
+    )
+    if result.matched_count == 0:
+        return err("Order tidak ditemukan", 404)
+
+    return jsonify({"order_id": order_id, "status": status})
+
 
 # ═══════════════════════════════════════════
 # ADMIN — User management
