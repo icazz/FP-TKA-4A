@@ -9,7 +9,7 @@
 | 5027241048 | Afrizan Rasya |
 | 5027241058 | Ica Zika Hamizah |
 | 5027241064 | Hanif Mawla Faizi |
-| 5027241093 | Atok Tajuddin |
+| 5027241093 | M. Atha Tajuddin |
 
 ---
 
