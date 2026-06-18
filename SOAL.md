@@ -216,7 +216,7 @@ Buat laporan dalam format **Markdown** yang dipublish di repository GitHub kelom
    - Source code backend (`app.py`) dan frontend
    - Locustfile yang digunakan
    - `README.md` berisi laporan lengkap
-3. Batas waktu pengumpulan: **[minggu 17**. Penilaian diambil dari commit terakhir sebelum deadline.
+3. Batas waktu pengumpulan: **minggu 17**. Penilaian diambil dari commit terakhir sebelum deadline.
 
 ### Rubrik Penilaian
 
