@@ -2,6 +2,7 @@ services:
   mongodb:
     image: mongo
     restart: always
+    command: mongod --wiredTigerCacheSizeGB 0.8 --maxConns 200
     ports:
       - 27017:27017
     volumes:
