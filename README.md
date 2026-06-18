@@ -7,12 +7,15 @@
 
 ## Anggota Kelompok
 
-| Nama | NRP |
-|------|-----|
-| [Nama 1] | [NRP 1] |
-| [Nama 2] | [NRP 2] |
-| [Nama 3] | [NRP 3] |
-| [Nama 4] | [NRP 4] |
+
+| NRP | Nama |
+|------------|--------------------------|
+| 5027241008 | Paundra Pujo |
+| 5027241022 | Ardhi Putra Pradana |
+| 5027241048 | Afrizan Rasya |
+| 5027241058 | Ica Zika Hamizah |
+| 5027241064 | Hanif Mawla Faizi |
+| 5027241093 | M. Atha Tajuddin |
 
 ---
 
