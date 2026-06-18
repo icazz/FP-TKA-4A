@@ -61,9 +61,9 @@ Menggunakan **Digital Ocean** (Credit $200): (masih salah, harus di cek lagi)
 | 2 | worker-1 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
 | 3 | worker-2 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
 | 4 | db | MongoDB | 1 vCPU, 2 GB RAM | $18 |
-| | | | **Total** | **$40/bulan** |
+| | | | **Total** | **$60/bulan** |
 
-Total biaya **$60/bulan**, masih di bawah budget $60.
+Total biaya **$60/bulan**, masih di bawah budget $75.
 
 ### Alasan Pemilihan Konfigurasi
 
@@ -89,6 +89,8 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 ```
 
+Bukti Screenshot docker berhasil di set up : 
+
 ![docker -v](./Result/docker-v.png)
 
 ### 3.2 Setup MongoDB (VM: db)
@@ -110,7 +112,7 @@ Verifikasi MongoDB berjalan:
 docker exec -it mongodb mongosh --eval "db.adminCommand('ping')"
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot output `mongosh ping` atau `docker ps` yang menunjukkan MongoDB running.
+![docker -v](./Result/mongoCheck.png)
 
 Tambahkan index untuk optimasi:
 
@@ -142,7 +144,7 @@ Verifikasi node bergabung:
 docker node ls
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot output `docker node ls` yang menunjukkan manager + 2 worker dengan status `Ready`.
+![docker -v](./Result/dockerSwarm.png)
 
 ### 3.4 Deploy Stack Aplikasi (VM: manager)
 
@@ -162,7 +164,7 @@ docker stack services order
 docker service ls
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot output `docker service ls` yang menunjukkan semua service `REPLICAS` terpenuhi (mis. `4/4` untuk backend).
+![docker -v](./Result/DockerStatDeploy.png)
 
 ### 3.5 Konfigurasi Traefik
 
@@ -172,13 +174,13 @@ Traefik dikonfigurasi via label di `docker-stack.yaml`:
 - Frontend route: `PathPrefix(/)` → forward ke port 80
 - Dashboard Traefik tersedia di `http://<IP_MANAGER>:8080`
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Traefik dashboard (`http://<IP_MANAGER>:8080`) yang menampilkan router `backend` dan `frontend` aktif.
+![docker -v](./Result/TraefikDashboard.png)
 
 ### 3.6 Verifikasi Frontend
 
 Buka browser ke `http://<IP_MANAGER>/` untuk mengakses antarmuka frontend.
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot tampilan frontend di browser (halaman utama aplikasi Order Processing).
+![docker -v](./Result/UIFrontend.png)
 
 ---
 
@@ -210,7 +212,7 @@ Pengujian dilakukan menggunakan **apidog** ke base URL `http://<IP_MANAGER>/api`
 }
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Postman: request POST `/order` dan response 201 dengan body JSON.
+![docker -v](./Result/UjiEndpoint1.png)
 
 ### 4.2 GET /order/\<order_id\> — Get Order Status
 
@@ -229,13 +231,14 @@ Gunakan `order_id` dari hasil POST di atas.
 }
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Postman: request GET `/order/<uuid>` dan response 200.
+![docker -v](./Result/UjiEndpoint2.png)
 
 ### 4.3 GET /orders — Get Order History
 
 **Expected Response (200 OK):** Array seluruh pesanan, diurutkan terbaru lebih dulu.
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Postman: request GET `/orders` dan response array JSON.
+
+![docker -v](./Result/UjiEndpoint3.png)
 
 ### 4.4 PUT /order/\<order_id\> — Update Order Status
 
@@ -252,11 +255,17 @@ Gunakan `order_id` dari hasil POST di atas.
 }
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Postman: request PUT `/order/<uuid>` dan response 200 dengan status updated.
+![docker -v](./Result/UjiEndpoint4.png)
+
 
 ### 4.5 Tampilan Frontend
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot antarmuka frontend yang menampilkan form pembuatan order dan daftar riwayat pesanan.
+
+![docker -v](./Result/FormPembuatanOrder.png)
+
+Screenshot UI Riwayat Pesanan : 
+
+![docker -v](./Result/Riwayat.png)
 
 ---
 
