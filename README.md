@@ -263,7 +263,7 @@ Gunakan `order_id` dari hasil POST di atas.
 
 Cek Status & Update Status Pesanan : 
 
-![docker -v](./Result/Screenshot 2026-06-18 112644.png)
+![docker -v](./Result/StatUpdate.png)
 
 Riwayat Pesanan : 
 
