@@ -275,75 +275,142 @@ Riwayat Pesanan :
 
 Load testing dilakukan menggunakan Locust (`Resources/Test/locustfile.py`) dari komputer host yang **berbeda** dari server aplikasi. Database di-reset setelah setiap skenario (hanya data yang diinsert selama testing, bukan data awal).
 
-**Reset database antar skenario:**
+**Reset database antar skenario** (restore ke baseline + buat ulang index, tanpa menghapus data awal):
 ```bash
-docker exec -it mongodb mongosh orderdb --eval "db.orders.deleteMany({ _test: true })"
+docker exec db-mongodb-1 mongorestore --drop /dump --quiet
+docker exec db-mongodb-1 mongosh orderdb --quiet --eval '
+  db.orders.createIndex({created_at:-1});
+  db.orders.createIndex({order_id:1});
+  db.orders.createIndex({user_id:1,created_at:-1});'
 ```
-> *(Atau sesuai kondisi — hapus hanya dokumen yang diinsert selama skenario berjalan)*
+Setiap skenario dijalankan **60 detik** dengan target **2.000 user** secara konsisten (Locust headless), agar hasil antar skenario dapat dibandingkan secara adil.
 
-### Skenario 1 — Maksimum RPS (0% Failure)
+### Skenario 1, Maksimum RPS (0% Failure)
 
-- **Parameter:** User dinaikkan bertahap, spawn rate disesuaikan
+- **Parameter:** 2.000 user, spawn rate 20 user/detik
 - **Durasi:** 60 detik
 - **Target:** RPS tertinggi dengan 0% failure
 
 | Metric | Nilai |
 |--------|-------|
-| Max RPS (0% failure) | **[ISI HASIL]** |
-| Avg Response Time | [ISI HASIL] ms |
-| Jumlah User | [ISI HASIL] |
+| Max RPS (0% failure) | **168,53 RPS** |
+| Total Request | 10.128 |
+| Failure | **0%** |
+| Median Response Time | 780 ms |
+| 95th Percentile | 3.800 ms |
+| 99th Percentile | 4.800 ms |
+| Jumlah User | 2.000 |
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Locust: grafik RPS, response time, dan failure rate skenario 1 (0% failure). Sertakan juga screenshot `htop`/resource monitor di salah satu server.
+![Chart Skenario 1](./Result/chart_spawn_rate20.jpg)
 
-### Skenario 2 — Peak Concurrency (Spawn Rate 50)
+![Aggregate Skenario 1](./Result/aggregated_spawn_rate20.png)
 
-- **Parameter:** User dinaikkan hingga failure muncul, catat nilai tertinggi sebelum failure
+![RPS Skenario 1](./Result/rps_spawn_rate20.jpg)
+
+Dengan ramp bertahap (spawn rate 20), sistem mencapai **RPS tertinggi 168,53 dengan 0% failure** pada 2.000 user, dan latensi paling rendah di antara semua skenario (median 780 ms) karena beban naik perlahan sehingga MongoDB tidak langsung jenuh.
+
+### Skenario 2, Peak Concurrency (Spawn Rate 50)
+
+- **Parameter:** 2.000 user, spawn rate 50 user/detik
 - **Durasi:** 60 detik
-- **Spawn Rate:** 50 user/detik
 
 | Metric | Nilai |
 |--------|-------|
-| Max Concurrent Users (0% failure) | **[ISI HASIL]** |
-| RPS pada kondisi tersebut | [ISI HASIL] |
+| Max Concurrent Users (0% failure) | **2.000** |
+| RPS | 154,86 |
+| Failure | **0%** |
+| Median Response Time | 4.800 ms |
+| 95th Percentile | 12.000 ms |
+| Total Request | 9.341 |
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Locust skenario 2: grafik RPS + failure rate, dan screenshot CPU/memory server.
+![Chart Skenario 2](./Result/chart_spawn_rate50.jpg)
 
-### Skenario 3 — Peak Concurrency (Spawn Rate 100)
+![Aggregate Skenario 2](./Result/aggregated_spawn_rate50.png)
 
-| Metric | Nilai |
-|--------|-------|
-| Max Concurrent Users (0% failure) | **[ISI HASIL]** |
-| RPS pada kondisi tersebut | [ISI HASIL] |
+![RPS Skenario 2](./Result/rps_spawn_rate50.jpg)
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Locust skenario 3: grafik RPS + failure rate, dan screenshot CPU/memory server.
+Pada spawn rate 50, sistem **0% failure hingga 2.000 user** dengan RPS 154,86. Latensi naik (median 4,8 detik) dibanding ramp 20 karena beban datang lebih cepat.
 
-### Skenario 4 — Peak Concurrency (Spawn Rate 200)
+### Skenario 3, Peak Concurrency (Spawn Rate 100)
 
-| Metric | Nilai |
-|--------|-------|
-| Max Concurrent Users (0% failure) | **[ISI HASIL]** |
-| RPS pada kondisi tersebut | [ISI HASIL] |
-
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Locust skenario 4: grafik RPS + failure rate, dan screenshot CPU/memory server.
-
-### Skenario 5 — Peak Concurrency (Spawn Rate 500)
+- **Parameter:** 2.000 user, spawn rate 100 user/detik
+- **Durasi:** 60 detik
 
 | Metric | Nilai |
 |--------|-------|
-| Max Concurrent Users (0% failure) | **[ISI HASIL]** |
-| RPS pada kondisi tersebut | [ISI HASIL] |
+| Max Concurrent Users (0% failure) | **2.000** |
+| RPS | 112,52 |
+| Failure | **0%** |
+| Median Response Time | 12.000 ms |
+| 95th Percentile | 23.000 ms |
+| 99th Percentile | 26.000 ms |
+| Total Request | 6.769 |
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot Locust skenario 5: grafik RPS + failure rate, dan screenshot CPU/memory server.
+![Chart Skenario 3](./Result/chart_spawn_rate100.jpg)
+
+![Aggregate Skenario 3](./Result/Aggregated_spawn_rate100.png)
+
+![RPS Skenario 3](./Result/rps_spawn_rate100.jpg)
+
+Pada spawn rate 100, sistem tetap **0% failure hingga 2.000 user**, namun throughput turun ke 112,52 RPS dan median response time naik ke 12 detik — efek lonjakan yang lebih agresif membebani MongoDB.
+
+### Skenario 4, Peak Concurrency (Spawn Rate 200)
+
+- **Parameter:** 2.000 user, spawn rate 200 user/detik
+- **Durasi:** 60 detik
+
+| Metric | Nilai |
+|--------|-------|
+| Max Concurrent Users | **2.000** |
+| RPS | 300,19 |
+| Failure | 1 request (~0,01%) |
+| Median Response Time | 260 ms |
+| 95th Percentile | 24.000 ms |
+| 99th Percentile | 29.000 ms |
+| Total Request | 18.055 |
+
+![Chart Skenario 4](./Result/chart_spawn_rate200.jpg)
+
+![Aggregate Skenario 4](./Result/aggregated_spawn_rate200.png)
+
+![RPS Skenario 4](./Result/rps_spawn_rate200.jpg)
+
+Pada spawn rate 200 terlihat distribusi respons yang **bimodal**: median sangat rendah (260 ms) namun p95 sangat tinggi (24 detik). Sebagian besar request terlayani sangat cepat sementara sebagian kecil tertahan antrian MongoDB, sehingga total request & RPS terlihat lebih tinggi. Muncul pula 1 request gagal (~0,01%).
+
+### Skenario 5, Peak Concurrency (Spawn Rate 500)
+
+- **Parameter:** 2.000 user, spawn rate 500 user/detik
+- **Durasi:** 60 detik
+
+| Metric | Nilai |
+|--------|-------|
+| Max Concurrent Users (0% failure) | **2.000** |
+| RPS | 81,87 |
+| Failure | **0%** |
+| Median Response Time | 19.000 ms |
+| 95th Percentile | 37.000 ms |
+| 99th Percentile | 39.000 ms |
+| Total Request | 4.921 |
+
+![Chart Skenario 5](./Result/chart_spawn_rate500.jpg)
+
+![Aggregate Skenario 5](./Result/aggregated_spawn_rate500.png)
+
+![RPS Skenario 5](./Result/rps_spawn_rate500.jpg)
+
+Pada spawn rate 500 (skenario paling ekstrem), sistem **tetap 0% failure hingga 2.000 user**, tetapi throughput jatuh ke 81,87 RPS dengan latensi terparah (median 19 detik, p99 39 detik). Lonjakan mendadak 500 user/detik mensimulasikan flash sale — request tidak ditolak, tetapi sangat lambat akibat bottleneck database.
 
 ### Ringkasan Hasil Load Testing
 
-| Skenario | Spawn Rate | Max Users (0% fail) | Avg RPS |
-|----------|------------|----------------------|---------|
-| 1 – Maks RPS | Bertahap | [ISI] | **[ISI]** |
-| 2 | 50 | **[ISI]** | [ISI] |
-| 3 | 100 | **[ISI]** | [ISI] |
-| 4 | 200 | **[ISI]** | [ISI] |
-| 5 | 500 | **[ISI]** | [ISI] |
+| Skenario | Spawn Rate | Max Users (0% fail) | RPS | Median (ms) |
+|----------|------------|----------------------|-----|-------------|
+| 1 – Maks RPS | 20 | 2.000 | **168,53** | 780 |
+| 2 | 50 | 2.000 | 154,86 | 4.800 |
+| 3 | 100 | 2.000 | 112,52 | 12.000 |
+| 4 | 200 | 2.000 | 300,19* | 260* |
+| 5 | 500 | 2.000 | 81,87 | 19.000 |
+
+> *Skenario 4 menunjukkan pola bimodal (median sangat rendah, p95 sangat tinggi) sehingga angka RPS-nya tidak setara dengan skenario lain — lihat penjelasan pada bagian Skenario 4.
 
 ### Analisis
 
