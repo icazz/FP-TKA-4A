@@ -52,17 +52,19 @@ Traffic masuk diterima Traefik di Manager, kemudian didistribusikan ke replica b
 
 ### Spesifikasi VM & Harga
 
-Menggunakan **Digital Ocean** (Credit $200): (masih salah, harus di cek lagi)
+Layanan cloud yang digunakan adalah **Digital Ocean** (Credit $200):
+
+![Digital Ocean Provider](./Result/Digital_ocean_provider.png)
 
 | No | Nama VM | Peran | Spesifikasi | Harga/bulan |
 |----|---------|-------|-------------|-------------|
 | 1 | manager | Swarm Manager + Traefik LB | 2 vCPU, 2 GB RAM | $18 |
-| 2 | worker-1 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
-| 3 | worker-2 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
+| 2 | worker-1 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $18 |
+| 3 | worker-2 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $18 |
 | 4 | db | MongoDB | 1 vCPU, 2 GB RAM | $18 |
-| | | | **Total** | **$60/bulan** |
+| | | | **Total** | **$72/bulan** |
 
-Total biaya **$60/bulan**, masih di bawah budget $75.
+Total biaya **$72/bulan**, masih di bawah budget $75.
 
 ### Alasan Pemilihan Konfigurasi
 
@@ -437,9 +439,8 @@ Implementasi Order Processing Service pada infrastruktur Docker Swarm di Digital
 2. **Tambahkan CDN** — Frontend yang bersifat statis idealnya di-serve dari CDN (Cloudflare/DO Spaces) untuk mengurangi beban server dan meningkatkan latency global.
 3. **Implementasi Horizontal Auto-Scaling** — Integrasikan monitoring (Prometheus + Grafana) dengan trigger otomatis untuk menambah replica saat RPS atau CPU melewati threshold tertentu.
 4. **Gunakan HTTPS** — Konfigurasikan TLS di Traefik menggunakan Let's Encrypt (sudah tersedia di Traefik) untuk keamanan data in-transit.
-5. **Connection Pooling** — Atur `maxPoolSize` pada `MongoClient` di `app.py` agar koneksi tidak berlebihan saat concurrent user tinggi.
-6. **Rate Limiting** — Tambahkan middleware rate limiting di Traefik untuk mencegah abuse pada endpoint `/order`.
-7. **Pisahkan Log & Monitoring** — Gunakan stack ELK atau Loki + Grafana untuk centralized logging dari semua replica backend.
+5. **Rate Limiting** — Tambahkan middleware rate limiting di Traefik untuk mencegah abuse pada endpoint `/order`.
+6. **Pisahkan Log & Monitoring** — Gunakan stack ELK atau Loki + Grafana untuk centralized logging dari semua replica backend.
 
 ---
 
