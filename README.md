@@ -40,8 +40,7 @@ Aplikasi menyediakan 4 endpoint utama:
 
 ### Diagram Arsitektur
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Masukkan gambar diagram arsitektur dari draw.io di sini.  
-> Format: `![Arsitektur Cloud](./result/arsitektur.png)`
+![docker -v](./Result/ArsitekturTKA.jpeg)
 
 Arsitektur yang digunakan adalah **Docker Swarm** dengan topologi multi-node:
 
@@ -260,10 +259,13 @@ Gunakan `order_id` dari hasil POST di atas.
 
 ### 4.5 Tampilan Frontend
 
-
 ![docker -v](./Result/FormPembuatanOrder.png)
 
-Screenshot UI Riwayat Pesanan : 
+Cek Status & Update Status Pesanan : 
+
+![docker -v](./Result/Screenshot 2026-06-18 112644.png)
+
+Riwayat Pesanan : 
 
 ![docker -v](./Result/Riwayat.png)
 
