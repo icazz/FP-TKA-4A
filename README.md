@@ -57,13 +57,13 @@ Menggunakan **Digital Ocean** (Credit $200): (masih salah, harus di cek lagi)
 
 | No | Nama VM | Peran | Spesifikasi | Harga/bulan |
 |----|---------|-------|-------------|-------------|
-| 1 | manager | Swarm Manager + Traefik LB | 2 vCPU, 2 GB RAM | $12 |
-| 2 | worker-1 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $8 |
-| 3 | worker-2 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $8 |
-| 4 | db | MongoDB | 1 vCPU, 2 GB RAM | $12 |
+| 1 | manager | Swarm Manager + Traefik LB | 2 vCPU, 2 GB RAM | $18 |
+| 2 | worker-1 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
+| 3 | worker-2 | Swarm Worker (BE + FE) | 2 vCPU, 2 GB RAM | $12 |
+| 4 | db | MongoDB | 1 vCPU, 2 GB RAM | $18 |
 | | | | **Total** | **$40/bulan** |
 
-Total biaya **$72/bulan**, masih di bawah budget $75.
+Total biaya **$60/bulan**, masih di bawah budget $60.
 
 ### Alasan Pemilihan Konfigurasi
 
@@ -89,7 +89,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 ```
 
-> **📸 [SCREENSHOT DIPERLUKAN]** — Screenshot terminal saat Docker berhasil diinstall (`docker --version`) di salah satu node.
+![docker -v](./Result/docker-v.png)
 
 ### 3.2 Setup MongoDB (VM: db)
 
